@@ -1,3 +1,5 @@
+const express = require('express')
+const app = express()
 const TelegramBot = require("node-telegram-bot-api");
 const dotenv = require("dotenv");
 const axios = require("axios");
@@ -370,3 +372,9 @@ bot.onText(/\/inspire/, async (msg) => {
 });
 
 console.log("Bot is running...");
+
+const port = process.env.PORT || 4000;
+
+app.listen(port, () => {
+  console.log(` listening on port ${port}`)
+})
