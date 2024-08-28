@@ -36,9 +36,12 @@ I'm here to make your day brighter and keep you entertained. Choose an option be
         ],
         [
           { text: "⏰ Set a Reminder", callback_data: "reminder" },
-          { text: "😂 Get a Meme", callback_data: "meme" },
+          { text: "📚 Get a Meme", callback_data: "meme" },
         ],
-        [{ text: "🌟 Get Inspired", callback_data: "inspire" }],
+        [
+          { text: "🌟 Get Inspired", callback_data: "inspire" },
+          { text: "👤 About Me", callback_data: "about" },
+        ],
       ],
     },
   };
@@ -153,6 +156,16 @@ bot.on("callback_query", async (query) => {
         const inspireQuote = `${inspireResponse.data.content} - ${inspireResponse.data.author}`;
         bot.sendMessage(message.chat.id, inspireQuote);
         break;
+      case "about":
+        const aboutMe = `
+👤 💻 About Me 💻
+
+Name: Mohammad Rammal  
+Email: mohammad.rammal@hotmail.com  
+LinkedIn: [Mohammad Rammal](https://www.linkedin.com/in/mohammad-rammal)
+        `;
+        bot.sendMessage(message.chat.id, aboutMe);
+        break;
       default:
         bot.sendMessage(message.chat.id, "Unknown command.");
     }
@@ -252,23 +265,10 @@ bot.onText(/\/trivia/, async (msg) => {
         inline_keyboard: [triviaOptions],
       },
     });
-
-    bot.once("callback_query", (query) => {
-      if (query.message.chat.id === msg.chat.id) {
-        if (query.data === correctAnswer) {
-          bot.sendMessage(msg.chat.id, "Correct! 🎉");
-        } else {
-          bot.sendMessage(
-            msg.chat.id,
-            `Oops! The correct answer was ${correctAnswer}.`
-          );
-        }
-      }
-    });
   } catch (error) {
     bot.sendMessage(
       msg.chat.id,
-      "Sorry, I couldn't fetch a trivia question at the moment."
+      "Sorry, I couldn't fetch trivia questions at the moment."
     );
   }
 });
@@ -288,61 +288,51 @@ bot.onText(/\/news/, async (msg) => {
   } catch (error) {
     bot.sendMessage(
       msg.chat.id,
-      "Sorry, I couldn't fetch the latest news at the moment."
+      "Sorry, I couldn't fetch the news at the moment."
     );
   }
 });
 
-// Currency Conversion Command
-bot.onText(/\/currency (.+) (.+) (.+)/, async (msg, match) => {
-  const amount = match[1];
-  const fromCurrency = match[2].toUpperCase();
-  const toCurrency = match[3].toUpperCase();
-  const apiKey = process.env.CURRENCY_API_KEY;
-  const url = `https://api.exchangerate-api.com/v4/latest/${fromCurrency}`;
+// Currency Converter Command
+bot.onText(/\/currency (.+)/, async (msg, match) => {
+  const [amount, fromCurrency, toCurrency] = match[1].split(" ");
+  const apiKey = process.env.FIXER_API_KEY;
+  const url = `https://data.fixer.io/api/convert?access_key=${apiKey}&from=${fromCurrency}&to=${toCurrency}&amount=${amount}`;
 
   try {
     const response = await axios.get(url);
-    const rate = response.data.rates[toCurrency];
-    const convertedAmount = (amount * rate).toFixed(2);
+    const convertedAmount = response.data.result;
     bot.sendMessage(
       msg.chat.id,
-      `${amount} ${fromCurrency} = ${convertedAmount} ${toCurrency}`
+      `${amount} ${fromCurrency} is equivalent to ${convertedAmount} ${toCurrency}.`
     );
   } catch (error) {
     bot.sendMessage(
       msg.chat.id,
-      "Sorry, I couldn't convert the currency at the moment."
+      "Sorry, I couldn't perform the currency conversion at the moment."
     );
   }
 });
 
 // Poll Command
-bot.onText(/\/poll (.+)/, (msg, match) => {
+bot.onText(/\/poll (.+)/, async (msg, match) => {
   const question = match[1];
-  bot.sendMessage(msg.chat.id, `Creating poll: ${question}`, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "Option 1", callback_data: "option1" }],
-        [{ text: "Option 2", callback_data: "option2" }],
-        [{ text: "Option 3", callback_data: "option3" }],
-        [{ text: "Option 4", callback_data: "option4" }],
-      ],
-    },
+  const options = [
+    { text: "Option 1", callback_data: "option1" },
+    { text: "Option 2", callback_data: "option2" },
+  ];
+
+  bot.sendPoll(msg.chat.id, question, ["Option 1", "Option 2"], {
+    is_anonymous: false,
   });
 });
 
 // Reminder Command
 bot.onText(/\/reminder (\d+) (.+)/, (msg, match) => {
-  const minutes = parseInt(match[1], 10);
+  const minutes = parseInt(match[1]);
   const reminderMessage = match[2];
 
-  if (isNaN(minutes)) {
-    bot.sendMessage(msg.chat.id, "Please provide a valid number of minutes.");
-    return;
-  }
-
-  schedule.scheduleJob(Date.now() + minutes * 60 * 1000, () => {
+  schedule.scheduleJob(Date.now() + minutes * 60000, () => {
     bot.sendMessage(msg.chat.id, `Reminder: ${reminderMessage}`);
   });
 
@@ -377,10 +367,6 @@ bot.onText(/\/inspire/, async (msg) => {
       "Sorry, I couldn't fetch an inspirational quote at the moment."
     );
   }
-});
-
-bot.on("polling_error", (error) => {
-  console.log(`Polling error: ${error.code} - ${error.message}`);
 });
 
 console.log("Bot is running...");
